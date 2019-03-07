@@ -15,7 +15,7 @@ import (
   "crypto/hmac"
   "crypto/sha1"
   "encoding/json"
-	"encoding/base64"
+  "encoding/base64"
 )
 
 type Credentials struct {
@@ -100,15 +100,15 @@ func getSortedKeys(m map[string]string) []string {
 }
 
 func checkError(e error) {
-	if e != nil {
-		panic(e)
-	}
+  if e != nil {
+    panic(e)
+  }
 }
 
 func getRandomB64(numBytes uint) string {
-	raw := make([]byte, numBytes)
-	_, e := rand.Read(raw)
-	checkError(e)
+  raw := make([]byte, numBytes)
+  _, e := rand.Read(raw)
+  checkError(e)
   return base64.StdEncoding.EncodeToString(raw)
 }
 
