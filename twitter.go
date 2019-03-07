@@ -26,11 +26,11 @@ type Credentials struct {
 }
 
 var (
-  httpMethod = "GET"
-  baseURL = "https://api.twitter.com/1.1/search/tweets.json"
-  credsFile = "credentials.json"
-  consumerSecret = ""
-  oauthTokenSecret = ""
+  HTTP_METHOD = "GET"
+  BASE_URL = "https://api.twitter.com/1.1/search/tweets.json"
+  CREDS_FILE_PATH = "credentials.json"
+  CONSUMER_SECRET = ""
+  OAUTH_TOKEN_SECRET = ""
 )
 
 var params = map[string]string {
@@ -69,15 +69,15 @@ func buildParamStr() string {
 }
 
 func buildSignatureBaseStr(paramStr string) string {
-  baseStr := httpMethod + "&"
-  baseStr += url.QueryEscape(baseURL) + "&"
+  baseStr := HTTP_METHOD + "&"
+  baseStr += url.QueryEscape(BASE_URL) + "&"
   baseStr += url.QueryEscape(paramStr)
   return baseStr
 }
 
 func buildSigningKey() string {
-  signingKey := url.QueryEscape(consumerSecret) + "&"
-  signingKey += url.QueryEscape(oauthTokenSecret)
+  signingKey := url.QueryEscape(CONSUMER_SECRET) + "&"
+  signingKey += url.QueryEscape(OAUTH_TOKEN_SECRET)
   return signingKey
 }
 
@@ -152,7 +152,7 @@ func buildOauthHeader() string {
 }
 
 func demoOauth() {
-  req, e := http.NewRequest(httpMethod, baseURL + "?q=" + url.QueryEscape(params["q"]), nil)
+  req, e := http.NewRequest(HTTP_METHOD, BASE_URL + "?q=" + url.QueryEscape(params["q"]), nil)
   checkError(e)
   authHeader := buildOauthHeader()
   req.Header.Add("Authorization", authHeader)
@@ -167,7 +167,7 @@ func demoOauth() {
 }
 
 func loadCredentials() {
-  file, e := os.Open(credsFile)
+  file, e := os.Open(CREDS_FILE_PATH)
   checkError(e)
   defer file.Close()
 
@@ -177,9 +177,9 @@ func loadCredentials() {
   json.Unmarshal(bytes, &creds)
 
   params["oauth_consumer_key"] = creds.ConsumerKey
-  consumerSecret = creds.ConsumerSecret
+  CONSUMER_SECRET = creds.ConsumerSecret
   params["oauth_token"] = creds.OauthToken
-  oauthTokenSecret = creds.OauthTokenSecret
+  OAUTH_TOKEN_SECRET = creds.OauthTokenSecret
 }
 
 /**
@@ -188,7 +188,7 @@ func loadCredentials() {
  * specification
  */
 func main() {
-  fmt.Println("Loading credentials from", credsFile)
+  fmt.Println("Loading credentials from", CREDS_FILE_PATH)
   loadCredentials()
   fmt.Println("Searching tweets")
   demoOauth()
