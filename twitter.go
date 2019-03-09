@@ -183,9 +183,9 @@ func loadCredentials() {
 }
 
 /**
- * Note: it looks like twitter requires url.QueryEscape as opposed to
- * url.PathEscape, i.e. they are following the rahter weird url form encoded
- * specification
+ * Note: it looks like twitter follows a url encoding convention where spaces
+ * are ignored! Hence QueryEscape and PathEscape both break when the query has
+ * spaces.
  */
 func main() {
   fmt.Println("Loading credentials from", CREDS_FILE_PATH)
