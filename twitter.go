@@ -198,10 +198,10 @@ func UrlEncode(s string) string {
 }
 
 func demoUrlencode() {
-	s := ":/?#[]@!$&'()*+,;=% "
-	fmt.Println(UrlEncode(s))
-	fmt.Println(url.QueryEscape(s))
-	fmt.Println(url.PathEscape(s))
+  s := ":/?#[]@!$&'()*+,;=% "
+  fmt.Println(UrlEncode(s))
+  fmt.Println(url.QueryEscape(s))
+  fmt.Println(url.PathEscape(s))
 }
 
 func main() {
