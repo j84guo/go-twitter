@@ -224,6 +224,13 @@ func shouldEncode(c byte) bool {
 	}
 }
 
+// TODO:
+// * try streaming API, e.g. goroutine pulling tweets and calling event
+// 	 handling lambdas
+// * support different REST endpoints, e.g. posting tweets, user search
+// * organize into a library, e.g. provide a Twitter struct to act as interface
+// 	 to the API, on which methods like searchTweets, postTweet, searchUsers,
+// 	 streamTweets can be made 
 func main() {
   fmt.Println("Loading credentials from", CREDS_FILE_PATH)
   loadCredentials()
