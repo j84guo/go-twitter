@@ -6,7 +6,6 @@ import (
   "fmt"
   "sort"
   "time"
-  "net/url"
   "strings"
   "strconv"
   "net/http"
@@ -33,6 +32,9 @@ var (
   OAUTH_TOKEN_SECRET = ""
 )
 
+
+// TODO: on request, caller must provide query string or form parameters which
+// will be put used, in addition to this map, for signature computation
 var params = map[string]string {
   "q": "golang compiler",
   "oauth_consumer_key": "",
@@ -184,28 +186,42 @@ func loadCredentials() {
 
 // URL encodes reserved and non-ASCII characters in a string, following the
 // "path" convention whereby spaces are converted to %20.
-//
-// We create a wrapper since url.PathEscape does not convert certain reserved
-// characters; Golang says paths may contain those. Twitter expects __all__
-// reserved characters to be escaped, but assumes %20 instead of +.
-//
-// TODO: first pass counting and second pass allocation
-func PercentEncode(s string) string {
-  s = url.PathEscape(s)
-  s = strings.Replace(s, "+", "%2B", -1)
-  s = strings.Replace(s, ":", "%3A", -1)
-  s = strings.Replace(s, "@", "%40", -1)
-  s = strings.Replace(s, "=", "%3D", -1)
-  s = strings.Replace(s, "$", "%24", -1)
-  s = strings.Replace(s, "&", "%26", -1)
-  return s
+func PercentEncode(str string) string {
+	hex := 0
+	for i := range str {
+		if shouldEncode(str[i]) {
+			hex++
+		}
+	}
+
+	HEXCHARS := "0123456789ABCDEF"
+	buf := make([]byte, len(str) + 2 * hex)
+	j := 0
+	for i := range str {
+		if shouldEncode(str[i]) {
+			buf[j] = '%'
+			buf[j + 1] = HEXCHARS[str[i] >> 4]
+			buf[j + 2] = HEXCHARS[str[i] & 0xF]
+			j += 2
+		} else {
+			buf[j] = str[i]
+		}
+		j++
+	}
+
+	return string(buf)
 }
 
-func demoUrlencode() {
-  s := ":/?#[]@!$&'()*+,;=% "
-  fmt.Println(PercentEncode(s))
-  fmt.Println(url.QueryEscape(s))
-  fmt.Println(url.PathEscape(s))
+func shouldEncode(c byte) bool {
+	if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
+		return false
+	}
+	switch c {
+	case '-', '.', '_', '~':
+		return false
+	default:
+		return true
+	}
 }
 
 func main() {
