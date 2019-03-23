@@ -185,7 +185,11 @@ func loadCredentials() {
 // URL encodes reserved and non-ASCII characters in a string, following the
 // "path" convention whereby spaces are converted to %20.
 //
-// We create a wrapper since UrlEncode does not convert '+'
+// We create a wrapper since url.PathEscape does not convert certain reserved
+// characters; Golang says paths may contain those. Twitter expects __all__
+// reserved characters to be escaped, but assumes %20 instead of +.
+//
+// TODO: first pass counting and second pass allocation
 func UrlEncode(s string) string {
   s = url.PathEscape(s)
   s = strings.Replace(s, "+", "%2B", -1)
