@@ -4,13 +4,9 @@ import (
   "io"
   "os"
   "fmt"
-  "sort"
-  "time"
   "strings"
-  "strconv"
   "net/http"
   "io/ioutil"
-  "math/rand"
   "crypto/hmac"
   "crypto/sha1"
   "encoding/json"
@@ -24,19 +20,19 @@ type Credentials struct {
   OauthTokenSecret string `json:OauthTokenSecret`
 }
 
-var (
+const (
   HTTP_METHOD = "GET"
   BASE_URL = "https://api.twitter.com/1.1/search/tweets.json"
   CREDS_FILE_PATH = "credentials.json"
-  CONSUMER_SECRET = ""
-  OAUTH_TOKEN_SECRET = ""
 )
 
+var (
+  CREDS Credentials
+)
 
 // TODO: on request, caller must provide query string or form parameters which
 // will be put used, in addition to this map, for signature computation
-var params = map[string]string {
-  "q": "golang compiler",
+var OAUTH_PARAMS = map[string]string {
   "oauth_consumer_key": "",
   "oauth_signature_method": "HMAC-SHA1",
   "oauth_token": "",
@@ -45,9 +41,9 @@ var params = map[string]string {
   "oauth_timestamp": "",
 }
 
-func buildParamStr() string {
-  params["oauth_nonce"] = getRandomB64(32)
-  params["oauth_timestamp"] = getUnixTimestamp()
+func buildParamStr(params map[string]string) string {
+  params["oauth_nonce"] = GetRandomB64(32)
+  params["oauth_timestamp"] = GetUnixTimestamp()
 
   percentMap := make(map[string]string)
   for k, v := range params {
@@ -57,7 +53,7 @@ func buildParamStr() string {
   }
 
   paramStr := ""
-  sortedKeys := getSortedKeys(percentMap)
+  sortedKeys := GetSortedKeys(percentMap)
   n := len(sortedKeys)
   for i, k := range sortedKeys {
     paramStr += k + "=" + percentMap[k]
@@ -78,8 +74,8 @@ func buildSignatureBaseStr(paramStr string) string {
 }
 
 func buildSigningKey() string {
-  signingKey := PercentEncode(CONSUMER_SECRET) + "&"
-  signingKey += PercentEncode(OAUTH_TOKEN_SECRET)
+  signingKey := PercentEncode(CREDS.ConsumerSecret) + "&"
+  signingKey += PercentEncode(CREDS.OauthTokenSecret)
   return signingKey
 }
 
@@ -90,38 +86,8 @@ func buildSignatureStr(base, key string) string {
   return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
-func getSortedKeys(m map[string]string) []string {
-  keys := make([]string, len(m))
-  i := 0
-  for k, _ := range m {
-    keys[i] = k
-    i++
-  }
-  sort.Strings(keys)
-  return keys
-}
-
-func checkError(e error) {
-  if e != nil {
-    panic(e)
-  }
-}
-
-func getRandomB64(numBytes uint) string {
-  raw := make([]byte, numBytes)
-  _, e := rand.Read(raw)
-  checkError(e)
-  return base64.StdEncoding.EncodeToString(raw)
-}
-
-func getUnixTimestamp() string {
-  var seconds int64 = time.Now().Unix()
-  return strconv.FormatInt(seconds, 10)
-}
-
-
-func buildHeaderParams() map[string]string {
-  paramStr := buildParamStr()
+func buildHeaderParams(params map[string]string) map[string]string {
+  paramStr := buildParamStr(params)
   baseStr := buildSignatureBaseStr(paramStr)
   signingKey := buildSigningKey()
   signatureStr := buildSignatureStr(baseStr, signingKey)
@@ -136,9 +102,10 @@ func buildHeaderParams() map[string]string {
   return headerParams
 }
 
-func buildOauthHeader() string {
-  headerParams := buildHeaderParams()
-  sortedKeys := getSortedKeys(headerParams)
+func buildOauthHeader(requestParams map[string]string) string {
+  combined := CombinedMaps(requestParams, OAUTH_PARAMS)
+  headerParams := buildHeaderParams(combined)
+  sortedKeys := GetSortedKeys(headerParams)
   n := len(sortedKeys)
 
   header := "OAuth "
@@ -154,74 +121,36 @@ func buildOauthHeader() string {
 }
 
 func demoOauth() {
+  // query string and form params
+  params := map[string]string {
+    "q": "strawberry",
+  }
+
   req, e := http.NewRequest(HTTP_METHOD, BASE_URL + "?q=" + PercentEncode(params["q"]), nil)
-  checkError(e)
-  authHeader := buildOauthHeader()
+  CheckError(e)
+  authHeader := buildOauthHeader(params)
   req.Header.Add("Authorization", authHeader)
 
   client := &http.Client{}
   resp, e := client.Do(req)
-  checkError(e)
+  CheckError(e)
   defer resp.Body.Close()
 
   _, e = io.Copy(os.Stdout, resp.Body)
-  checkError(e)
+  CheckError(e)
 }
 
 func loadCredentials() {
   file, e := os.Open(CREDS_FILE_PATH)
-  checkError(e)
+  CheckError(e)
   defer file.Close()
 
   bytes, e := ioutil.ReadAll(file)
-  checkError(e)
-  var creds Credentials
-  json.Unmarshal(bytes, &creds)
+  CheckError(e)
+  json.Unmarshal(bytes, &CREDS)
 
-  params["oauth_consumer_key"] = creds.ConsumerKey
-  CONSUMER_SECRET = creds.ConsumerSecret
-  params["oauth_token"] = creds.OauthToken
-  OAUTH_TOKEN_SECRET = creds.OauthTokenSecret
-}
-
-// URL encodes reserved and non-ASCII characters in a string, following the
-// "path" convention whereby spaces are converted to %20.
-func PercentEncode(str string) string {
-	hex := 0
-	for i := range str {
-		if shouldEncode(str[i]) {
-			hex++
-		}
-	}
-
-	HEXCHARS := "0123456789ABCDEF"
-	buf := make([]byte, len(str) + 2 * hex)
-	j := 0
-	for i := range str {
-		if shouldEncode(str[i]) {
-			buf[j] = '%'
-			buf[j + 1] = HEXCHARS[str[i] >> 4]
-			buf[j + 2] = HEXCHARS[str[i] & 0xF]
-			j += 2
-		} else {
-			buf[j] = str[i]
-		}
-		j++
-	}
-
-	return string(buf)
-}
-
-func shouldEncode(c byte) bool {
-	if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
-		return false
-	}
-	switch c {
-	case '-', '.', '_', '~':
-		return false
-	default:
-		return true
-	}
+  OAUTH_PARAMS["oauth_consumer_key"] = CREDS.ConsumerKey
+  OAUTH_PARAMS["oauth_token"] = CREDS.OauthToken
 }
 
 // TODO:
@@ -230,7 +159,7 @@ func shouldEncode(c byte) bool {
 // * support different REST endpoints, e.g. posting tweets, user search
 // * organize into a library, e.g. provide a Twitter struct to act as interface
 // 	 to the API, on which methods like searchTweets, postTweet, searchUsers,
-// 	 streamTweets can be made 
+// 	 streamTweets can be made
 func main() {
   fmt.Println("Loading credentials from", CREDS_FILE_PATH)
   loadCredentials()
