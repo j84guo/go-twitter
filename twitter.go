@@ -49,8 +49,8 @@ func buildParamStr() string {
 
   percentMap := make(map[string]string)
   for k, v := range params {
-    percentKey := UrlEncode(k)
-    percentVal := UrlEncode(v)
+    percentKey := PercentEncode(k)
+    percentVal := PercentEncode(v)
     percentMap[percentKey] = percentVal
   }
 
@@ -70,14 +70,14 @@ func buildParamStr() string {
 
 func buildSignatureBaseStr(paramStr string) string {
   baseStr := HTTP_METHOD + "&"
-  baseStr += UrlEncode(BASE_URL) + "&"
-  baseStr += UrlEncode(paramStr)
+  baseStr += PercentEncode(BASE_URL) + "&"
+  baseStr += PercentEncode(paramStr)
   return baseStr
 }
 
 func buildSigningKey() string {
-  signingKey := UrlEncode(CONSUMER_SECRET) + "&"
-  signingKey += UrlEncode(OAUTH_TOKEN_SECRET)
+  signingKey := PercentEncode(CONSUMER_SECRET) + "&"
+  signingKey += PercentEncode(OAUTH_TOKEN_SECRET)
   return signingKey
 }
 
@@ -142,7 +142,7 @@ func buildOauthHeader() string {
   header := "OAuth "
   for i, k := range sortedKeys {
     v := headerParams[k]
-    header += UrlEncode(k) + "=\"" + UrlEncode(v) + "\""
+    header += PercentEncode(k) + "=\"" + PercentEncode(v) + "\""
     if (i < n - 1) {
       header += ", "
     }
@@ -152,7 +152,7 @@ func buildOauthHeader() string {
 }
 
 func demoOauth() {
-  req, e := http.NewRequest(HTTP_METHOD, BASE_URL + "?q=" + UrlEncode(params["q"]), nil)
+  req, e := http.NewRequest(HTTP_METHOD, BASE_URL + "?q=" + PercentEncode(params["q"]), nil)
   checkError(e)
   authHeader := buildOauthHeader()
   req.Header.Add("Authorization", authHeader)
@@ -190,7 +190,7 @@ func loadCredentials() {
 // reserved characters to be escaped, but assumes %20 instead of +.
 //
 // TODO: first pass counting and second pass allocation
-func UrlEncode(s string) string {
+func PercentEncode(s string) string {
   s = url.PathEscape(s)
   s = strings.Replace(s, "+", "%2B", -1)
   s = strings.Replace(s, ":", "%3A", -1)
@@ -203,7 +203,7 @@ func UrlEncode(s string) string {
 
 func demoUrlencode() {
   s := ":/?#[]@!$&'()*+,;=% "
-  fmt.Println(UrlEncode(s))
+  fmt.Println(PercentEncode(s))
   fmt.Println(url.QueryEscape(s))
   fmt.Println(url.PathEscape(s))
 }
