@@ -34,7 +34,7 @@ var (
 )
 
 var params = map[string]string {
-  "q": "golang",
+  "q": "golang compiler",
   "oauth_consumer_key": "",
   "oauth_signature_method": "HMAC-SHA1",
   "oauth_token": "",
@@ -49,8 +49,8 @@ func buildParamStr() string {
 
   percentMap := make(map[string]string)
   for k, v := range params {
-    percentKey := url.QueryEscape(k)
-    percentVal := url.QueryEscape(v)
+    percentKey := UrlEncode(k)
+    percentVal := UrlEncode(v)
     percentMap[percentKey] = percentVal
   }
 
@@ -70,14 +70,14 @@ func buildParamStr() string {
 
 func buildSignatureBaseStr(paramStr string) string {
   baseStr := HTTP_METHOD + "&"
-  baseStr += url.QueryEscape(BASE_URL) + "&"
-  baseStr += url.QueryEscape(paramStr)
+  baseStr += UrlEncode(BASE_URL) + "&"
+  baseStr += UrlEncode(paramStr)
   return baseStr
 }
 
 func buildSigningKey() string {
-  signingKey := url.QueryEscape(CONSUMER_SECRET) + "&"
-  signingKey += url.QueryEscape(OAUTH_TOKEN_SECRET)
+  signingKey := UrlEncode(CONSUMER_SECRET) + "&"
+  signingKey += UrlEncode(OAUTH_TOKEN_SECRET)
   return signingKey
 }
 
@@ -142,7 +142,7 @@ func buildOauthHeader() string {
   header := "OAuth "
   for i, k := range sortedKeys {
     v := headerParams[k]
-    header += url.QueryEscape(k) + "=\"" + url.QueryEscape(v) + "\""
+    header += UrlEncode(k) + "=\"" + UrlEncode(v) + "\""
     if (i < n - 1) {
       header += ", "
     }
@@ -152,7 +152,7 @@ func buildOauthHeader() string {
 }
 
 func demoOauth() {
-  req, e := http.NewRequest(HTTP_METHOD, BASE_URL + "?q=" + url.QueryEscape(params["q"]), nil)
+  req, e := http.NewRequest(HTTP_METHOD, BASE_URL + "?q=" + UrlEncode(params["q"]), nil)
   checkError(e)
   authHeader := buildOauthHeader()
   req.Header.Add("Authorization", authHeader)
@@ -182,11 +182,28 @@ func loadCredentials() {
   OAUTH_TOKEN_SECRET = creds.OauthTokenSecret
 }
 
-/**
- * Note: it looks like twitter follows a url encoding convention where spaces
- * are ignored! Hence QueryEscape and PathEscape both break when the query has
- * spaces.
- */
+// URL encodes reserved and non-ASCII characters in a string, following the
+// "path" convention whereby spaces are converted to %20.
+//
+// We create a wrapper since UrlEncode does not convert '+'
+func UrlEncode(s string) string {
+  s = url.PathEscape(s)
+  s = strings.Replace(s, "+", "%2B", -1)
+  s = strings.Replace(s, ":", "%3A", -1)
+  s = strings.Replace(s, "@", "%40", -1)
+  s = strings.Replace(s, "=", "%3D", -1)
+  s = strings.Replace(s, "$", "%24", -1)
+  s = strings.Replace(s, "&", "%26", -1)
+  return s
+}
+
+func demoUrlencode() {
+	s := ":/?#[]@!$&'()*+,;=% "
+	fmt.Println(UrlEncode(s))
+	fmt.Println(url.QueryEscape(s))
+	fmt.Println(url.PathEscape(s))
+}
+
 func main() {
   fmt.Println("Loading credentials from", CREDS_FILE_PATH)
   loadCredentials()
