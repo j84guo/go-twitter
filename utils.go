@@ -11,41 +11,41 @@ import (
 // URL encodes reserved and non-ASCII characters in a string, following the
 // "path" convention whereby spaces are converted to %20.
 func PercentEncode(str string) string {
-	hex := 0
-	for i := range str {
-		if shouldEncode(str[i]) {
-			hex++
-		}
-	}
+  hex := 0
+  for i := range str {
+    if shouldEncode(str[i]) {
+      hex++
+    }
+  }
 
-	HEXCHARS := "0123456789ABCDEF"
-	buf := make([]byte, len(str) + 2 * hex)
-	j := 0
-	for i := range str {
-		if shouldEncode(str[i]) {
-			buf[j] = '%'
-			buf[j + 1] = HEXCHARS[str[i] >> 4]
-			buf[j + 2] = HEXCHARS[str[i] & 0xF]
-			j += 2
-		} else {
-			buf[j] = str[i]
-		}
-		j++
-	}
+  HEXCHARS := "0123456789ABCDEF"
+  buf := make([]byte, len(str) + 2 * hex)
+  j := 0
+  for i := range str {
+    if shouldEncode(str[i]) {
+      buf[j] = '%'
+      buf[j + 1] = HEXCHARS[str[i] >> 4]
+      buf[j + 2] = HEXCHARS[str[i] & 0xF]
+      j += 2
+    } else {
+      buf[j] = str[i]
+    }
+    j++
+  }
 
-	return string(buf)
+  return string(buf)
 }
 
 func shouldEncode(c byte) bool {
-	if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
-		return false
-	}
-	switch c {
-	case '-', '.', '_', '~':
-		return false
-	default:
-		return true
-	}
+  if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
+    return false
+  }
+  switch c {
+  case '-', '.', '_', '~':
+    return false
+  default:
+    return true
+  }
 }
 
 // Take the union of two maps and return a copy
