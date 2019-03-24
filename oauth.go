@@ -72,7 +72,7 @@ func buildSignatureStr(base, key string) string {
 
 // Map of params to use for building the authorization header
 func buildHeaderParams(
-		t *Twitter,
+    t *Twitter,
     httpMethod string,
     baseURL string,
     params map[string]string) map[string]string {
@@ -95,7 +95,7 @@ func buildHeaderParams(
 // Parameter requestParams is expected to contain query string and form
 // key-values
 func BuildOauthHeader(
-		t *Twitter,
+    t *Twitter,
     httpMethod string,
     baseURL string,
     requestParams map[string]string) string {
