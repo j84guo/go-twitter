@@ -21,21 +21,6 @@ const (
   CREDS_FILE_PATH = "credentials.json"
 )
 
-var (
-  CREDS Credentials
-)
-
-// On request, caller must provide query string or form parameters which will be
-// used, in addition to this map, for signature computation
-var OAUTH_PARAMS = map[string]string {
-  "oauth_consumer_key": "",
-  "oauth_signature_method": "HMAC-SHA1",
-  "oauth_token": "",
-  "oauth_version": "1.0",
-  "oauth_nonce": "",
-  "oauth_timestamp": "",
-}
-
 // Percent encode oauth params and concatenate them in sorted order
 func buildParamStr(params map[string]string) string {
   params["oauth_nonce"] = GetRandomB64(32)
@@ -71,9 +56,9 @@ func buildSignatureBaseStr(httpMethod, baseURL, paramStr string) string {
 }
 
 // Private credentials used to sign base string
-func buildSigningKey() string {
-  signingKey := PercentEncode(CREDS.ConsumerSecret) + "&"
-  signingKey += PercentEncode(CREDS.OauthTokenSecret)
+func buildSigningKey(consumerSecret, oauthTokenSecret string) string {
+  signingKey := PercentEncode(consumerSecret) + "&"
+  signingKey += PercentEncode(oauthTokenSecret)
   return signingKey
 }
 
@@ -87,12 +72,13 @@ func buildSignatureStr(base, key string) string {
 
 // Map of params to use for building the authorization header
 func buildHeaderParams(
+		t *Twitter,
     httpMethod string,
     baseURL string,
     params map[string]string) map[string]string {
   paramStr := buildParamStr(params)
   baseStr := buildSignatureBaseStr(httpMethod, baseURL, paramStr)
-  signingKey := buildSigningKey()
+  signingKey := buildSigningKey(t.creds.ConsumerSecret, t.creds.OauthTokenSecret)
   signatureStr := buildSignatureStr(baseStr, signingKey)
 
   headerParams := make(map[string]string)
@@ -109,11 +95,12 @@ func buildHeaderParams(
 // Parameter requestParams is expected to contain query string and form
 // key-values
 func BuildOauthHeader(
+		t *Twitter,
     httpMethod string,
     baseURL string,
     requestParams map[string]string) string {
-  combined := CombinedMaps(requestParams, OAUTH_PARAMS)
-  headerParams := buildHeaderParams(httpMethod, baseURL, combined)
+  combined := CombinedMaps(requestParams, t.oauthParams)
+  headerParams := buildHeaderParams(t, httpMethod, baseURL, combined)
   sortedKeys := GetSortedKeys(headerParams)
   n := len(sortedKeys)
 
@@ -130,24 +117,20 @@ func BuildOauthHeader(
 }
 
 // Read oauth tokens from file (consumer/user public/private)
-func LoadCredentials(credsFilePath string) {
+func LoadCredentials(t *Twitter, credsFilePath string) {
   file, e := os.Open(credsFilePath)
   CheckError(e)
   defer file.Close()
 
   bytes, e := ioutil.ReadAll(file)
   CheckError(e)
-  json.Unmarshal(bytes, &CREDS)
+  json.Unmarshal(bytes, &t.creds)
 
-  OAUTH_PARAMS["oauth_consumer_key"] = CREDS.ConsumerKey
-  OAUTH_PARAMS["oauth_token"] = CREDS.OauthToken
+  t.oauthParams["oauth_consumer_key"] = t.creds.ConsumerKey
+  t.oauthParams["oauth_token"] = t.creds.OauthToken
 }
 
 // To be called before using {@link BuildOAuthHeader()}
-func InitCredentials(creds ...Credentials) {
-  if len(creds) == 1 {
-    CREDS = creds[0]
-  } else {
-    LoadCredentials(CREDS_FILE_PATH)
-  }
+func InitCredentials(t *Twitter) {
+  LoadCredentials(t, CREDS_FILE_PATH)
 }
